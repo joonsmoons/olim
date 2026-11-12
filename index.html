@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>할머니 할아버지 곧 만나요!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet">
+<style>
+  :root{--cream:#fff7ee;--rose:#f6a5b5;--coral:#ff7a6b;--gold:#f5c04a;--ink:#5a3e36}
+  *{box-sizing:border-box;margin:0;padding:0}
+  [hidden]{display:none!important}
+  html,body{height:100%}
+  body{font-family:'Gowun Dodum',sans-serif;color:var(--ink);background:var(--cream);overflow:hidden;-webkit-tap-highlight-color:transparent}
+  .bg{position:fixed;inset:0;background:
+    radial-gradient(circle at 20% 15%,#ffe9d6 0,transparent 45%),
+    radial-gradient(circle at 85% 85%,#ffdbe3 0,transparent 50%),var(--cream);transition:background 1.5s}
+  body.opened .bg{background:
+    radial-gradient(circle at 50% 30%,#fff1c9 0,transparent 50%),
+    radial-gradient(circle at 15% 90%,#ffd3dc 0,transparent 45%),
+    radial-gradient(circle at 90% 10%,#ffe6d6 0,transparent 45%),var(--cream)}
+  canvas{position:fixed;inset:0;pointer-events:none;z-index:5}
+  .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;text-align:center;z-index:2;
+    padding:max(24px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left))}
+  button,.gift{touch-action:manipulation;-webkit-user-select:none;user-select:none}
+
+  /* ---------- cover / gift ---------- */
+  #cover{justify-content:center;transition:opacity 1.1s ease,transform 1.1s ease}
+  body.opened #cover{opacity:0;transform:scale(1.1);pointer-events:none}
+  .gift{width:min(64vw,260px);overflow:visible;cursor:pointer;filter:drop-shadow(0 14px 18px rgba(200,120,100,.3));
+    animation:wiggle 2.6s ease-in-out infinite}
+  body.opening .gift{animation:none;cursor:default}
+  @keyframes wiggle{0%,60%,100%{transform:rotate(0)}10%{transform:rotate(-3deg)}20%{transform:rotate(3deg)}30%{transform:rotate(-2deg)}40%{transform:rotate(1.5deg)}}
+  #lid{transform-box:fill-box;transform-origin:15% 100%}
+  body.opening #lid{animation:lidOpen 2.8s cubic-bezier(.45,.05,.3,1) forwards}
+  @keyframes lidOpen{
+    0%{transform:translate(0,0) rotate(0)}
+    25%{transform:translate(0,-6px) rotate(-1deg)}
+    100%{transform:translate(-34px,-120px) rotate(-32deg);opacity:0}}
+  #glow{opacity:0;transform-box:fill-box;transform-origin:50% 100%}
+  body.opening #glow{animation:glowUp 3s ease-out .5s forwards}
+  @keyframes glowUp{0%{opacity:0;transform:scaleY(.2)}60%{opacity:1}100%{opacity:1;transform:scaleY(1.6)}}
+  .cover-text{transition:opacity .6s}
+  body.opening .cover-text{opacity:0;pointer-events:none}
+  .cover-title{font-family:'Jua';font-size:clamp(22px,5.6vw,32px);line-height:1.4;margin-top:30px;word-break:keep-all}
+  .cover-sub{margin-top:10px;opacity:.7;font-size:16px;line-height:1.4}
+  .btn{margin-top:24px;font-family:'Jua';font-size:20px;color:#fff;background:linear-gradient(135deg,var(--coral),var(--rose));
+    border:0;border-radius:999px;padding:14px 34px;cursor:pointer;box-shadow:0 8px 20px rgba(255,122,107,.35)}
+
+  /* ---------- stage ---------- */
+  #stage{opacity:0;pointer-events:none;transition:opacity 1s;display:grid;grid-template-rows:auto auto auto;align-content:center;align-content:safe center;justify-items:center;align-items:normal;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+  #stage::before,#stage::after{display:none}
+  .top{align-self:end;padding-bottom:24px}
+  .bottom{align-self:start;padding-top:24px}
+  body.opened #stage{opacity:1}
+  .star{position:fixed;background:var(--gold);border-radius:50%;opacity:0;z-index:1;animation:twinkle 3s ease-in-out infinite}
+  @keyframes twinkle{0%,100%{opacity:0;transform:scale(.4)}50%{opacity:.9;transform:scale(1.2)}}
+
+  .msg{font-family:'Jua';font-size:clamp(23px,6.4vw,36px);line-height:1.42;letter-spacing:-.015em;word-break:keep-all;opacity:0;transform:translateY(16px) scale(.96)}
+  body.play .msg{animation:fade 1.4s ease 0s forwards}
+  @keyframes fade{to{opacity:1;transform:none}}
+
+  .slot{width:min(72vw,300px,max(180px,calc(100vh - 400px)))}
+  @supports (height:100svh){.slot{width:min(72vw,300px,max(180px,calc(100svh - 400px)))}}
+  @media (max-height:560px){
+    .msg{font-size:20px;line-height:1.3}
+    .grow{font-size:14px;margin-top:6px}
+    .top{padding-bottom:10px}.bottom{padding-top:10px}
+    .slot{width:min(60vw,120px)}
+    .caption{font-size:13px;margin-top:6px}
+    .gift{width:min(40vw,150px)}
+    .cover-title{margin-top:14px}.btn{margin-top:14px;padding:10px 28px}
+  }
+  .polaroid{text-align:center;position:fixed;left:0;top:0;z-index:2;background:#fff;padding:12px 12px 14px;border-radius:6px;
+    box-shadow:0 14px 30px rgba(120,80,60,.25);transform-origin:0 0;transform:none;visibility:hidden}
+  .polaroid.flying{visibility:visible}
+  .polaroid.landed{position:static;visibility:visible;width:100%!important}
+  .photo{display:block;width:100%;aspect-ratio:1;border-radius:3px;object-fit:cover;background:#111}
+  .caption{font-family:'Jua';font-size:clamp(16px,5vw,20px);line-height:1.35;margin-top:12px;color:var(--ink);word-break:keep-all;text-wrap:balance}
+
+  .grow{margin-top:16px;font-family:'Jua';font-size:clamp(14px,4.4vw,24px);line-height:1.4;white-space:nowrap;color:var(--ink);opacity:0}
+  .grow .hl{color:var(--coral)}
+  body.play .grow{animation:fade 1.4s ease 0s forwards}
+  .due{margin-top:0;font-family:'Jua';font-size:clamp(15px,4.3vw,24px);color:var(--coral);opacity:0;line-height:1.4;white-space:nowrap;letter-spacing:-.01em}
+  body.play .due{animation:fade 1.4s ease 0s forwards}
+
+  .heart{position:fixed;bottom:-40px;z-index:1;pointer-events:none;animation:rise linear forwards}
+  @keyframes rise{to{transform:translateY(-115vh) translateX(var(--dx));opacity:0}}
+  @media (prefers-reduced-motion:reduce){.gift{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<canvas id="fx"></canvas>
+
+<!-- ============ COVER ============ -->
+<section class="screen" id="cover">
+  <svg class="gift" id="giftBtn" viewBox="0 0 200 200" role="button" aria-label="선물 열기">
+    <defs>
+      <radialGradient id="g" cx="50%" cy="100%" r="80%">
+        <stop offset="0" stop-color="#fff8d6" stop-opacity="1"/>
+        <stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <ellipse cx="100" cy="188" rx="72" ry="8" fill="#e9b8a6" opacity=".5"/>
+    <path id="glow" d="M45 95 L10 -40 L190 -40 L155 95Z" fill="url(#g)"/>
+    <rect x="30" y="95" width="140" height="85" rx="8" fill="#ffb3a7"/>
+    <rect x="88" y="95" width="24" height="85" fill="#fff3d6"/>
+    <rect x="30" y="95" width="140" height="10" fill="#e9877a" opacity=".5"/>
+    <g id="lid">
+      <rect x="22" y="68" width="156" height="30" rx="8" fill="#ff8f80"/>
+      <rect x="88" y="68" width="24" height="30" fill="#fff3d6"/>
+      <path d="M100 68 C 60 20, 30 50, 100 68 C 170 50, 140 20, 100 68Z" fill="#fff3d6" stroke="#f5d9a0" stroke-width="3"/>
+      <circle cx="100" cy="68" r="9" fill="#f5c04a"/>
+    </g>
+  </svg>
+  <div class="cover-text" style="text-align:center">
+    <p class="cover-title">부모님께 작은 선물이 도착했어요</p>
+    <p class="cover-sub">선물을 눌러 열어보세요 🎁</p>
+    <button class="btn" id="openBtn">열어보기</button>
+  </div>
+</section>
+
+<!-- ============ STAGE ============ -->
+<section class="screen" id="stage">
+  <div class="top">
+  <p class="msg">할머니 할아버지<br>많이 기다리셨죠?</p>
+
+  <p class="grow">저는 엄마 <span class="hl">배에서 쑥쑥</span> 크고 있어요.</p>
+  </div>
+  <div class="slot" id="slot"></div>
+  <div class="polaroid" id="flyer">
+    <img class="photo" id="usImg" alt="초음파 사진" hidden>
+    <svg class="photo" id="usPlaceholder" viewBox="0 0 200 200">
+      <defs>
+        <radialGradient id="fan" cx="50%" cy="0%" r="110%">
+          <stop offset="0" stop-color="#555"/><stop offset=".6" stop-color="#2a2a2a"/><stop offset="1" stop-color="#0d0d0d"/>
+        </radialGradient>
+        <radialGradient id="bb" cx="40%" cy="40%" r="70%"><stop offset="0" stop-color="#f2f2f2"/><stop offset="1" stop-color="#9a9a9a"/></radialGradient>
+        <filter id="soft"><feGaussianBlur stdDeviation="1.2"/></filter>
+      </defs>
+      <rect width="200" height="200" fill="#080808"/>
+      <path d="M100 6 L8 150 A110 110 0 0 0 192 150Z" fill="url(#fan)"/>
+      <g filter="url(#soft)">
+        <ellipse cx="100" cy="102" rx="48" ry="38" fill="#1b1b1b"/>
+        <circle cx="78" cy="92" r="24" fill="url(#bb)"/>
+        <path d="M54 94 q-8 4 -3 10 q4 2 6 -2" fill="#d8d8d8"/>
+        <circle cx="72" cy="88" r="3.5" fill="#222"/>
+        <path d="M96 100 C 130 88, 150 112, 128 134 C 112 148, 84 140, 82 120 C 100 128, 118 122, 120 112 C 122 104, 108 102, 96 108Z" fill="#c9c9c9"/>
+        <circle cx="128" cy="138" r="6" fill="#b5b5b5"/>
+      </g>
+      <text x="12" y="20" fill="#bbb" font-size="9" font-family="monospace">BABY</text>
+    </svg>
+    <p class="caption">태명은 '올림'이에요 💛</p>
+  </div>
+
+  <div class="bottom"><p class="due" id="due"></p></div>
+</section>
+
+<script>
+/* ===== 여기만 수정하세요 ===== */
+const DUE_HTML = '🍼 내년 7월 4일에 만나요!';   // 비워두면("") 숨겨져요
+const ULTRASOUND_SRC = "";   // 초음파 사진 (data URI). 비워두면 임시 그림이 보여요
+/* ============================ */
+
+const $ = s => document.querySelector(s);
+/* 초음파 사진 카드는 선물 상자 바로 뒤(아래층)에 두어, 상자 안에서 올라오는 것처럼 보이게 해요 */
+document.body.insertBefore($('#flyer'), $('#cover'));
+if(DUE_HTML) $('#due').innerHTML=DUE_HTML; else $('#due').remove();
+if(ULTRASOUND_SRC){ $('#usImg').src=ULTRASOUND_SRC; $('#usImg').hidden=false; $('#usPlaceholder').hidden=true; }
+
+/* stars */
+for(let i=0;i<26;i++){
+  const s=document.createElement('i');s.className='star';
+  s.style.left=Math.random()*100+'vw';s.style.top=Math.random()*100+'vh';
+  s.style.animationDelay=(Math.random()*3)+'s';
+  const z=4+Math.random()*7;s.style.width=s.style.height=z+'px';
+  document.body.appendChild(s);
+}
+
+/* confetti */
+const cv=$('#fx'),cx=cv.getContext('2d');let P=[];
+const DPR=Math.min(devicePixelRatio||1,2);
+function fit(){cv.width=innerWidth*DPR;cv.height=innerHeight*DPR;cx.setTransform(DPR,0,0,DPR,0,0)}
+fit();addEventListener('resize',fit);
+const COLORS=['#ff7a6b','#f6a5b5','#f5c04a','#ffd9c7','#a9d4ee'];
+function burst(x,y,n){
+  for(let i=0;i<n;i++){
+    const a=Math.random()*Math.PI*2,v=4+Math.random()*9;
+    P.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-5,g:.22,r:4+Math.random()*5,c:COLORS[i%COLORS.length],
+      rot:Math.random()*6,vr:(Math.random()-.5)*.4,life:140+Math.random()*60,heart:Math.random()<.25});
+  }
+}
+function heartPath(x,y,s){cx.beginPath();cx.moveTo(x,y+s*.3);cx.bezierCurveTo(x-s,y-s*.5,x-s*.4,y-s*1.1,x,y-s*.4);cx.bezierCurveTo(x+s*.4,y-s*1.1,x+s,y-s*.5,x,y+s*.3);cx.fill()}
+(function loop(){
+  cx.clearRect(0,0,innerWidth,innerHeight);
+  P=P.filter(p=>p.life>0);
+  for(const p of P){
+    p.vy+=p.g;p.vx*=.992;p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;p.life--;
+    cx.globalAlpha=Math.min(1,p.life/40);cx.fillStyle=p.c;
+    if(p.heart)heartPath(p.x,p.y,p.r*1.6);
+    else{cx.save();cx.translate(p.x,p.y);cx.rotate(p.rot);cx.fillRect(-p.r/2,-p.r/2,p.r,p.r*.6);cx.restore()}
+  }
+  cx.globalAlpha=1;requestAnimationFrame(loop);
+})();
+
+let hc=0;
+function hearts(){
+  setInterval(()=>{
+    const h=document.createElement('div');h.className='heart';h.textContent=(hc++%2)?'💙':'🩷';
+    h.style.left=Math.random()*100+'vw';h.style.fontSize=(16+Math.random()*20)+'px';
+    const d=3.5+Math.random()*3;h.style.animationDuration=d+'s';h.style.setProperty('--dx',(Math.random()*80-40)+'px');
+    document.body.appendChild(h);setTimeout(()=>h.remove(),d*1000);
+  },500);
+}
+
+/* sequence: 선물이 천천히 열림(약 3.6초) → 메시지 → 초음파 사진 → 예정일 */
+/* ---------- 심장 소리 ----------
+   HEARTBEAT_SRC 에 실제 심장 소리 파일(data URI)을 넣으면 그게 재생돼요.
+   비워두면 임시로 브라우저에서 만든 "두근두근" 소리가 나와요.
+   선물을 연 뒤, 초음파 사진이 제자리에 도착하면 부드럽게 시작돼서 계속 반복돼요. */
+const HEARTBEAT_SRC = "";
+const HEARTBEAT_VOLUME = 0.8;
+let beat=null,AC=null,bus=null,beatTimer=null;
+function prepHeartbeat(){                      /* 선물을 누르는 순간 재생 권한을 미리 받아둬요 (폰 브라우저 규칙) */
+  try{
+    if(HEARTBEAT_SRC){
+      if(beat)return;
+      beat=new Audio(HEARTBEAT_SRC);beat.loop=true;beat.preload='auto';beat.volume=0;
+      const p=beat.play();
+      if(p&&p.then)p.then(()=>{beat.pause();beat.currentTime=0}).catch(()=>{});
+    }else{
+      if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();bus=AC.createGain();bus.gain.value=0;bus.connect(AC.destination)}
+      if(AC.state==='suspended')AC.resume();
+    }
+  }catch(e){beat=null;AC=null}
+}
+function thump(t,f,vol){                       /* 낮게 "둥" 하고 울렸다 사라지는 소리 */
+  [[f,1],[f*2,.45]].forEach(([fr,a])=>{
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.type='sine';o.frequency.setValueAtTime(fr*1.5,t);o.frequency.exponentialRampToValueAtTime(fr*.7,t+.14);
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol*a,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+.2);
+    o.connect(g).connect(bus);o.start(t);o.stop(t+.25);
+  });
+}
+function synthBeat(){const t=AC.currentTime+.02;thump(t,85,1);thump(t+.19,70,.7)}   /* 두근-두근 */
+function startHeartbeat(){
+  try{
+    if(HEARTBEAT_SRC&&beat){
+      beat.currentTime=0;beat.volume=0;
+      const p=beat.play();if(p&&p.catch)p.catch(()=>{});
+      let v=0;const id=setInterval(()=>{v=Math.min(HEARTBEAT_VOLUME,v+.04);beat.volume=v;if(v>=HEARTBEAT_VOLUME)clearInterval(id)},100);
+    }else if(AC){
+      if(AC.state==='suspended')AC.resume();
+      bus.gain.cancelScheduledValues(AC.currentTime);bus.gain.setValueAtTime(0,AC.currentTime);
+      bus.gain.linearRampToValueAtTime(HEARTBEAT_VOLUME,AC.currentTime+1.5);
+      synthBeat();clearInterval(beatTimer);beatTimer=setInterval(synthBeat,520);
+    }
+  }catch(e){}
+}
+
+function launchPhoto(onLand){
+  const flyer=$('#flyer'),slot=$('#slot');
+  const W=slot.offsetWidth; flyer.style.width=W+'px';
+  const H=flyer.offsetHeight; slot.style.height=H+'px';
+  const g=$('#giftBtn').getBoundingClientRect(), k=g.width/200;
+  const rimY=g.top+95*k, boxW=140*k, boxH=85*k, mid=g.left+g.width/2;
+  const s=Math.min(boxW*.72/W, boxH*.85/H);
+  const sl=slot.getBoundingClientRect();
+  const x0=mid-W*s/2, y0=rimY+boxH*.06, y1=rimY-H*s*1.1;
+  const T=(x,y,sc,r)=>`translate(${x}px,${y}px) rotate(${r}deg) scale(${sc})`;
+  flyer.classList.add('flying');
+  const a=flyer.animate([
+    {transform:T(x0,y0,s,0),offset:0},
+    {transform:T(x0,y0,s,0),offset:.1},
+    {transform:T(x0,y1,s,0),offset:.42,easing:'ease-out'},
+    {transform:T(sl.left,sl.top,1,0),offset:1,easing:'ease-in-out'}
+  ],{duration:3400,delay:1200,fill:'both',easing:'ease-in'});
+  a.onfinish=()=>{flyer.classList.add('landed');slot.appendChild(flyer);a.cancel();onLand()};
+}
+function openGift(){
+  if(document.body.classList.contains('opening'))return;
+  document.body.classList.add('opening');
+  prepHeartbeat();
+  setTimeout(()=>burst(innerWidth/2,innerHeight*.42,50),1800);
+  setTimeout(()=>document.body.classList.add('opened'),3000);
+  launchPhoto(()=>{
+    document.body.classList.add('play');      /* 메시지와 예정일이 한꺼번에 나타나요 */
+    startHeartbeat();
+    burst(innerWidth/2,innerHeight*.5,70);
+    setTimeout(hearts,800);
+  });
+}
+$('#openBtn').onclick=openGift;$('#giftBtn').onclick=openGift;
+</script>
+</body>
+</html>
