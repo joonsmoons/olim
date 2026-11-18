@@ -75,7 +75,7 @@
     box-shadow:0 14px 30px rgba(120,80,60,.25);transform-origin:0 0;transform:none;visibility:hidden}
   .polaroid.flying{visibility:visible}
   .polaroid.landed{position:static;visibility:visible;width:100%!important}
-  .photo{display:block;width:100%;aspect-ratio:1;border-radius:3px;object-fit:cover;background:#111}
+  .photo{display:block;width:100%;aspect-ratio:640/440;border-radius:3px;object-fit:cover;background:#111}
   .caption{font-family:'Jua';font-size:clamp(16px,5vw,20px);line-height:1.35;margin-top:12px;color:var(--ink);word-break:keep-all;text-wrap:balance}
 
   .grow{margin-top:16px;font-family:'Jua';font-size:clamp(14px,4.4vw,24px);line-height:1.4;white-space:nowrap;color:var(--ink);opacity:0}
@@ -130,8 +130,8 @@
   </div>
   <div class="slot" id="slot"></div>
   <div class="polaroid" id="flyer">
-    <img class="photo" id="usImg" alt="초음파 사진" hidden>
-    <svg class="photo" id="usPlaceholder" viewBox="0 0 200 200">
+    <video class="photo" id="usVid" muted loop playsinline webkit-playsinline preload="auto" aria-label="초음파 영상"></video>
+    <svg class="photo" id="usPlaceholder" viewBox="0 0 200 200" hidden>
       <defs>
         <radialGradient id="fan" cx="50%" cy="0%" r="110%">
           <stop offset="0" stop-color="#555"/><stop offset=".6" stop-color="#2a2a2a"/><stop offset="1" stop-color="#0d0d0d"/>
@@ -160,14 +160,16 @@
 <script>
 /* ===== 여기만 수정하세요 ===== */
 const DUE_HTML = '🍼 내년 7월 4일에 만나요!';   // 비워두면("") 숨겨져요
-const ULTRASOUND_SRC = "";   // 초음파 사진 (data URI). 비워두면 임시 그림이 보여요
+const ULTRASOUND_VIDEO = "ultrasound.mp4";   // 초음파 영상 파일 (index.html과 같은 폴더)
 /* ============================ */
 
 const $ = s => document.querySelector(s);
 /* 초음파 사진 카드는 선물 상자 바로 뒤(아래층)에 두어, 상자 안에서 올라오는 것처럼 보이게 해요 */
 document.body.insertBefore($('#flyer'), $('#cover'));
 if(DUE_HTML) $('#due').innerHTML=DUE_HTML; else $('#due').remove();
-if(ULTRASOUND_SRC){ $('#usImg').src=ULTRASOUND_SRC; $('#usImg').hidden=false; $('#usPlaceholder').hidden=true; }
+const vid=$('#usVid');
+vid.src=ULTRASOUND_VIDEO;
+vid.addEventListener('error',()=>{vid.hidden=true;$('#usPlaceholder').hidden=false});   /* 영상이 안 열리면 임시 그림 */
 
 /* stars */
 for(let i=0;i<26;i++){
@@ -215,50 +217,6 @@ function hearts(){
 }
 
 /* sequence: 선물이 천천히 열림(약 3.6초) → 메시지 → 초음파 사진 → 예정일 */
-/* ---------- 심장 소리 ----------
-   HEARTBEAT_SRC 에 실제 심장 소리 파일(data URI)을 넣으면 그게 재생돼요.
-   비워두면 임시로 브라우저에서 만든 "두근두근" 소리가 나와요.
-   선물을 연 뒤, 초음파 사진이 제자리에 도착하면 부드럽게 시작돼서 계속 반복돼요. */
-const HEARTBEAT_SRC = "";
-const HEARTBEAT_VOLUME = 0.8;
-let beat=null,AC=null,bus=null,beatTimer=null;
-function prepHeartbeat(){                      /* 선물을 누르는 순간 재생 권한을 미리 받아둬요 (폰 브라우저 규칙) */
-  try{
-    if(HEARTBEAT_SRC){
-      if(beat)return;
-      beat=new Audio(HEARTBEAT_SRC);beat.loop=true;beat.preload='auto';beat.volume=0;
-      const p=beat.play();
-      if(p&&p.then)p.then(()=>{beat.pause();beat.currentTime=0}).catch(()=>{});
-    }else{
-      if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();bus=AC.createGain();bus.gain.value=0;bus.connect(AC.destination)}
-      if(AC.state==='suspended')AC.resume();
-    }
-  }catch(e){beat=null;AC=null}
-}
-function thump(t,f,vol){                       /* 낮게 "둥" 하고 울렸다 사라지는 소리 */
-  [[f,1],[f*2,.45]].forEach(([fr,a])=>{
-    const o=AC.createOscillator(),g=AC.createGain();
-    o.type='sine';o.frequency.setValueAtTime(fr*1.5,t);o.frequency.exponentialRampToValueAtTime(fr*.7,t+.14);
-    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol*a,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+.2);
-    o.connect(g).connect(bus);o.start(t);o.stop(t+.25);
-  });
-}
-function synthBeat(){const t=AC.currentTime+.02;thump(t,85,1);thump(t+.19,70,.7)}   /* 두근-두근 */
-function startHeartbeat(){
-  try{
-    if(HEARTBEAT_SRC&&beat){
-      beat.currentTime=0;beat.volume=0;
-      const p=beat.play();if(p&&p.catch)p.catch(()=>{});
-      let v=0;const id=setInterval(()=>{v=Math.min(HEARTBEAT_VOLUME,v+.04);beat.volume=v;if(v>=HEARTBEAT_VOLUME)clearInterval(id)},100);
-    }else if(AC){
-      if(AC.state==='suspended')AC.resume();
-      bus.gain.cancelScheduledValues(AC.currentTime);bus.gain.setValueAtTime(0,AC.currentTime);
-      bus.gain.linearRampToValueAtTime(HEARTBEAT_VOLUME,AC.currentTime+1.5);
-      synthBeat();clearInterval(beatTimer);beatTimer=setInterval(synthBeat,520);
-    }
-  }catch(e){}
-}
-
 function launchPhoto(onLand){
   const flyer=$('#flyer'),slot=$('#slot');
   const W=slot.offsetWidth; flyer.style.width=W+'px';
@@ -281,12 +239,12 @@ function launchPhoto(onLand){
 function openGift(){
   if(document.body.classList.contains('opening'))return;
   document.body.classList.add('opening');
-  prepHeartbeat();
+  try{const p=vid.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}   /* 선물을 누르는 순간 초음파 영상 재생 시작 */
   setTimeout(()=>burst(innerWidth/2,innerHeight*.42,50),1800);
   setTimeout(()=>document.body.classList.add('opened'),3000);
   launchPhoto(()=>{
     document.body.classList.add('play');      /* 메시지와 예정일이 한꺼번에 나타나요 */
-    startHeartbeat();
+    try{vid.play()}catch(e){}                  /* 카드를 옮기면 영상이 멈춰서 다시 재생 */
     burst(innerWidth/2,innerHeight*.5,70);
     setTimeout(hearts,800);
   });
